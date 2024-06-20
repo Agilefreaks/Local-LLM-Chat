@@ -3,7 +3,7 @@ const axios = require('axios');
 const path = require('path');
 
 const app = express();
-const port = 3000;
+const port = 1234;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -12,25 +12,27 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+async function query(data) {
+  const response = await fetch(
+      "http://localhost:3000/api/v1/prediction/7ab03e5c-d5c0-4cfc-bfa5-7cd1c3a4e12d",
+      {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+      }
+  );
+  const result = await response.json();
+  return result;
+}
+
 app.post('/getChatResponse', async (req, res) => {
   const { userInput } = req.body;
-  const systemInput = "You are an intelligent assistant. You always provide well-reasoned answers that are both correct and helpful.";
-
   try {
-    const response = await axios.post('http://localhost:1234/v1/chat/completions', {
-      messages: [{ role: 'system', content: systemInput },
-                 { role: 'user', content: userInput }],
-      temperature: 0.7,
-      max_tokens: -1,
-      stream: false,
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      query({"question": userInput}).then((responseData) => {
+        res.send({ response: responseData.text });
     });
-
-    const responseData = response.data.choices[0].message.content;
-    res.send({ response: responseData });
   } catch (error) {
     console.error('Error:', error.message);
     res.status(500).send('An error occurred');
